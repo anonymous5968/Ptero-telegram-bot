@@ -23,6 +23,17 @@ async function createUser(email, username, password, isAdmin = false) {
   }
 }
 
+async function updateUser(userId, email, username, password) {
+  try {
+    const response = await axios.patch(`${PTERO_URL}/api/application/users/${userId}`, {
+      username, email, password, first_name: username, last_name: "User"
+    }, { headers });
+    return { success: true, data: response.data };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
 async function listUsers() {
   try {
     const response = await axios.get(`${PTERO_URL}/api/application/users`, { headers });
@@ -40,20 +51,29 @@ async function deleteUser(userId) {
 // --- SERVER MANAGEMENT ---
 async function createServer(userId, name) {
   try {
+    // This is the EXACT startup command from your manual server
+    // We escape the $ signs so JavaScript doesn't try to read them as variables
+    const startupCmd = `if [[ -d .git ]] && [[ {{AUTO_UPDATE}} == "1" ]]; then git pull; fi; if [[ ! -z \${NODE_PACKAGES} ]]; then /usr/local/bin/npm install \${NODE_PACKAGES}; fi; if [[ ! -z \${UNNODE_PACKAGES} ]]; then /usr/local/bin/npm uninstall \${UNNODE_PACKAGES}; fi; if [ -f /home/container/package.json ]; then /usr/local/bin/npm install; fi; if [[ ! -z \${CUSTOM_ENVIRONMENT_VARIABLES} ]]; then vars=$(echo \${CUSTOM_ENVIRONMENT_VARIABLES} | tr ";" "\\n"); for line in $vars; do export $line; done fi; /usr/local/bin/{{CMD_RUN}}`;
+
     const response = await axios.post(`${PTERO_URL}/api/application/servers`, {
       name: name,
       user: parseInt(userId),
       nest: 5,        
       egg: 15,        
-      docker_image: "ghcr.io/pterodactyl/yolks:node_18",
       
-      // 👇 OPTIMIZED STARTUP COMMAND
-      // This checks: "If package.json exists AND node_modules folder is MISSING, then run npm install."
-      // Otherwise, it skips installation and starts instantly.
-      startup: "if [ -f /home/container/package.json ] && [ ! -d /home/container/node_modules ]; then npm install; fi; node {{CMD_RUN}}",
+      // 👇 THIS IS THE KEY FIX (Using the Cached Image)
+      docker_image: "ghcr.io/parkervcp/yolks:nodejs_24",
+      
+      startup: startupCmd,
       
       environment: {
-        CMD_RUN: "index.js", 
+        CMD_RUN: "node index.js", 
+        AUTO_UPDATE: "0",
+        NODE_PACKAGES: "",
+        UNNODE_PACKAGES: "",
+        CUSTOM_ENVIRONMENT_VARIABLES: "",
+        
+        // Standard vars
         JS_FILE: "index.js",
         NODE_ENV: "production"
       },
@@ -74,7 +94,6 @@ async function createServer(userId, name) {
   }
 }
 
-
 async function listServers() {
   try {
     const response = await axios.get(`${PTERO_URL}/api/application/servers`, { headers });
@@ -89,5 +108,5 @@ async function deleteServer(serverId) {
   } catch (err) { return false; }
 }
 
-module.exports = { createUser, listUsers, deleteUser, createServer, listServers, deleteServer };
-      
+module.exports = { createUser, updateUser, listUsers, deleteUser, createServer, listServers, deleteServer };
+
