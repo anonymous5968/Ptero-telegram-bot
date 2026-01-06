@@ -1,3 +1,4 @@
+
 const axios = require('axios');
 
 // --- CREDENTIALS ---
@@ -43,14 +44,18 @@ async function createServer(userId, name) {
     const response = await axios.post(`${PTERO_URL}/api/application/servers`, {
       name: name,
       user: parseInt(userId),
-      nest: 1, 
-      egg: 1, 
-      docker_image: "ghcr.io/pterodactyl/yolks:java_17",
-      // FIXED: Hardcoded 16GB limit for Java heap to allow 'Unlimited' container memory
-      startup: "java -Xms128M -Xmx16384M -jar server.jar",
+      
+      // 👇 UPDATED FOR NODE.JS
+      nest: 5,        // Generic/Bot Nest
+      egg: 15,        // Node.js Egg
+      docker_image: "ghcr.io/pterodactyl/yolks:node_18", // Node.js Image
+      startup: "if [ -f /home/container/package.json ]; then npm install; fi; node index.js", // Standard Node Startup
       environment: {
-        SERVER_JARFILE: "server.jar"
+        // Node usually doesn't require specific env vars, but we pass an empty object or defaults
+        NODE_ENV: "production"
       },
+
+      // 👇 UNLIMITED RESOURCES
       limits: {
         memory: 0, // 0 = Unlimited
         swap: 0,   // 0 = Unlimited
@@ -64,14 +69,13 @@ async function createServer(userId, name) {
         allocations: 0
       },
       deploy: {
-        locations: [1], // Ensure you have a Location with ID 1
+        locations: [1], // Still uses Location 1
         dedicated_ip: false,
         port_range: []
       }
     }, { headers });
     return { success: true, data: response.data };
   } catch (err) {
-    // Returns the exact error message from Pterodactyl
     const errorMsg = err.response?.data?.errors?.[0]?.detail || err.message;
     console.error("Create Server Error:", errorMsg);
     return { success: false, error: errorMsg };
@@ -93,4 +97,4 @@ async function deleteServer(serverId) {
 }
 
 module.exports = { createUser, listUsers, deleteUser, createServer, listServers, deleteServer };
-  
+    
