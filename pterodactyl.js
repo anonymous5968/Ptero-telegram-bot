@@ -1,4 +1,3 @@
-
 const axios = require('axios');
 
 // --- CREDENTIALS ---
@@ -44,18 +43,21 @@ async function createServer(userId, name) {
     const response = await axios.post(`${PTERO_URL}/api/application/servers`, {
       name: name,
       user: parseInt(userId),
-      
-      // 👇 UPDATED FOR NODE.JS
-      nest: 5,        // Generic/Bot Nest
+      nest: 5,        // Generic Nest
       egg: 15,        // Node.js Egg
-      docker_image: "ghcr.io/pterodactyl/yolks:node_18", // Node.js Image
-      startup: "if [ -f /home/container/package.json ]; then npm install; fi; node index.js", // Standard Node Startup
+      docker_image: "ghcr.io/pterodactyl/yolks:node_18",
+      
+      // Use CMD_RUN in the startup command
+      startup: "if [ -f /home/container/package.json ]; then npm install; fi; node {{CMD_RUN}}",
+      
       environment: {
-        // Node usually doesn't require specific env vars, but we pass an empty object or defaults
+        // 👇 THIS FIXED THE ERROR
+        CMD_RUN: "index.js", 
+        
+        // We include these just in case your specific egg needs them too
+        JS_FILE: "index.js",
         NODE_ENV: "production"
       },
-
-      // 👇 UNLIMITED RESOURCES
       limits: {
         memory: 0, // 0 = Unlimited
         swap: 0,   // 0 = Unlimited
@@ -69,7 +71,7 @@ async function createServer(userId, name) {
         allocations: 0
       },
       deploy: {
-        locations: [1], // Still uses Location 1
+        locations: [1], 
         dedicated_ip: false,
         port_range: []
       }
@@ -97,4 +99,4 @@ async function deleteServer(serverId) {
 }
 
 module.exports = { createUser, listUsers, deleteUser, createServer, listServers, deleteServer };
-    
+      
