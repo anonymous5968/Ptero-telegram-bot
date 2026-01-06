@@ -79,4 +79,4 @@ async function cancelOp(bot, msg) {
 }
 
 module.exports = { createPanel, userInfo, cancelOp };
-    
+
