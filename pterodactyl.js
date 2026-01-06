@@ -43,46 +43,37 @@ async function createServer(userId, name) {
     const response = await axios.post(`${PTERO_URL}/api/application/servers`, {
       name: name,
       user: parseInt(userId),
-      nest: 5,        // Generic Nest
-      egg: 15,        // Node.js Egg
+      nest: 5,        
+      egg: 15,        
       docker_image: "ghcr.io/pterodactyl/yolks:node_18",
       
-      // Use CMD_RUN in the startup command
-      startup: "if [ -f /home/container/package.json ]; then npm install; fi; node {{CMD_RUN}}",
+      // 👇 OPTIMIZED STARTUP COMMAND
+      // This checks: "If package.json exists AND node_modules folder is MISSING, then run npm install."
+      // Otherwise, it skips installation and starts instantly.
+      startup: "if [ -f /home/container/package.json ] && [ ! -d /home/container/node_modules ]; then npm install; fi; node {{CMD_RUN}}",
       
       environment: {
-        // 👇 THIS FIXED THE ERROR
         CMD_RUN: "index.js", 
-        
-        // We include these just in case your specific egg needs them too
         JS_FILE: "index.js",
         NODE_ENV: "production"
       },
       limits: {
-        memory: 0, // 0 = Unlimited
-        swap: 0,   // 0 = Unlimited
-        disk: 0,   // 0 = Unlimited
-        io: 500,
-        cpu: 0     // 0 = Unlimited
+        memory: 0, swap: 0, disk: 0, io: 500, cpu: 0     
       },
       feature_limits: {
-        databases: 1,
-        backups: 1,
-        allocations: 0
+        databases: 1, backups: 1, allocations: 0
       },
       deploy: {
-        locations: [1], 
-        dedicated_ip: false,
-        port_range: []
+        locations: [1], dedicated_ip: false, port_range: []
       }
     }, { headers });
     return { success: true, data: response.data };
   } catch (err) {
     const errorMsg = err.response?.data?.errors?.[0]?.detail || err.message;
-    console.error("Create Server Error:", errorMsg);
     return { success: false, error: errorMsg };
   }
 }
+
 
 async function listServers() {
   try {
