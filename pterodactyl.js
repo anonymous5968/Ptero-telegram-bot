@@ -1,7 +1,6 @@
 const axios = require('axios');
 
 // --- CREDENTIALS ---
-// ⚠️ WARNING: It is unsafe to keep keys here. Move to .env when possible.
 const PTERO_URL = "https://hero.brevo.host";
 const API_KEY = "ptla_h7ZdStgd2cn22Wnyw4fXvmyNXRBrVQNzZMiskihllsJ";
 
@@ -15,17 +14,12 @@ const headers = {
 async function createUser(email, username, password, isAdmin = false) {
   try {
     const response = await axios.post(`${PTERO_URL}/api/application/users`, {
-      username, 
-      email, 
-      password, 
-      first_name: username, 
-      last_name: "User",
+      username, email, password, first_name: username, last_name: "User",
       root_admin: isAdmin
     }, { headers });
-    return response.data;
+    return { success: true, data: response.data };
   } catch (err) {
-    console.error("Create User Error:", err.response?.data?.errors || err.message);
-    return null;
+    return { success: false, error: err.response?.data?.errors?.[0]?.detail || err.message };
   }
 }
 
@@ -52,35 +46,35 @@ async function createServer(userId, name) {
       nest: 1, 
       egg: 1, 
       docker_image: "ghcr.io/pterodactyl/yolks:java_17",
-      startup: "java -Xms128M -Xmx{{SERVER_MEMORY}}M -jar server.jar",
+      // FIXED: Hardcoded 16GB limit for Java heap to allow 'Unlimited' container memory
+      startup: "java -Xms128M -Xmx16384M -jar server.jar",
       environment: {
         SERVER_JARFILE: "server.jar"
       },
-      // --- UNLIMITED RESOURCE CONFIGURATION ---
       limits: {
-        memory: 1024000, // Set to ~1TB (Unlimited). Do not use 0 for Java.
-        swap: 0,         // 0 = Unlimited Swap
-        disk: 0,         // 0 = Unlimited Disk
+        memory: 0, // 0 = Unlimited
+        swap: 0,   // 0 = Unlimited
+        disk: 0,   // 0 = Unlimited
         io: 500,
-        cpu: 0           // 0 = Unlimited CPU
+        cpu: 0     // 0 = Unlimited
       },
       feature_limits: {
         databases: 1,
         backups: 1,
         allocations: 0
       },
-      // --- DEPLOYMENT CONFIGURATION (Fixes "Server Failed") ---
       deploy: {
-        locations: [1], // Tries to create server on Location ID 1
+        locations: [1], // Ensure you have a Location with ID 1
         dedicated_ip: false,
         port_range: []
       }
     }, { headers });
-    return response.data;
+    return { success: true, data: response.data };
   } catch (err) {
-    // Enhanced error logging to see exactly why it fails
-    console.error("Create Server Error:", JSON.stringify(err.response?.data?.errors, null, 2) || err.message);
-    return null;
+    // Returns the exact error message from Pterodactyl
+    const errorMsg = err.response?.data?.errors?.[0]?.detail || err.message;
+    console.error("Create Server Error:", errorMsg);
+    return { success: false, error: errorMsg };
   }
 }
 
@@ -95,11 +89,8 @@ async function deleteServer(serverId) {
   try {
     await axios.delete(`${PTERO_URL}/api/application/servers/${serverId}`, { headers });
     return true;
-  } catch (err) { 
-    console.error("Delete Error:", err.message);
-    return false; 
-  }
+  } catch (err) { return false; }
 }
 
 module.exports = { createUser, listUsers, deleteUser, createServer, listServers, deleteServer };
-    
+  
