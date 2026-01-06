@@ -1,32 +1,54 @@
-const { createUser } = require('../pterodactyl');
+const { createUser, createServer } = require('../pterodactyl');
 const db = require('../firebase');
-const { isPaid } = require('../utils/helpers');
 
-async function start(bot, msg) {
-  bot.sendMessage(msg.chat.id, "Welcome! Use /createpanel to create your Pterodactyl panel.");
-}
-
+// /panel - Create User & Server
 async function createPanel(bot, msg) {
   const telegramId = msg.from.id;
-  const paid = await isPaid(telegramId);
+  const userRef = db.collection('users').doc(telegramId.toString());
+  const doc = await userRef.get();
 
-  if (!paid) return bot.sendMessage(telegramId, "Payment pending. Contact admin to approve.");
+  if (!doc.exists || !doc.data().paid) {
+    return bot.sendMessage(telegramId, "❌ <b>Access Denied:</b> You must buy access first.", { parse_mode: 'HTML' });
+  }
+  if (doc.data().panel_created) {
+    return bot.sendMessage(telegramId, `⚠ You already have a panel.\n<b>Username:</b> ${doc.data().username}\n<b>Password:</b> ${doc.data().password}`, { parse_mode: 'HTML' });
+  }
 
-  const email = `${telegramId}@pterobot.com`;
+  bot.sendMessage(telegramId, "⚙ Creating your panel and server...");
+
   const username = `user${telegramId}`;
   const password = Math.random().toString(36).slice(-8);
+  const email = `${telegramId}@pterobot.com`;
 
-  const user = await createUser(email, username, password);
-  if (!user) return bot.sendMessage(telegramId, "Error creating panel.");
+  // 1. Create Ptero User
+  const pteroUser = await createUser(email, username, password, false);
+  if (!pteroUser) return bot.sendMessage(telegramId, "❌ Error creating user.");
 
-  await db.collection('users').doc(telegramId.toString()).set({
-    username,
-    email,
-    password,
-    paid: true
-  }, { merge: true });
+  // 2. Create Ptero Server
+  const pteroServer = await createServer(pteroUser.attributes.id, `Server-${username}`);
+  if (!pteroServer) return bot.sendMessage(telegramId, "❌ User created, but server failed.");
 
-  bot.sendMessage(telegramId, `Panel created!\nUsername: ${username}\nPassword: ${password}`);
+  // 3. Save Data
+  await userRef.set({ username, password, email, panel_created: true, ptero_id: pteroUser.attributes.id }, { merge: true });
+
+  bot.sendMessage(telegramId, `✅ <b>Panel Created!</b>\n\n🔗 <b>URL:</b> https://hero.brevo.host\n👤 <b>User:</b> ${username}\nKZ <b>Pass:</b> ${password}`, { parse_mode: 'HTML' });
 }
 
-module.exports = { start, createPanel };
+// /info - Show User Details
+async function userInfo(bot, msg) {
+  const telegramId = msg.from.id;
+  const doc = await db.collection('users').doc(telegramId.toString()).get();
+
+  if (!doc.exists) return bot.sendMessage(telegramId, "❌ You are not registered.");
+  
+  const data = doc.data();
+  bot.sendMessage(telegramId, `👤 <b>User Information</b>\n\n<b>Paid:</b> ${data.paid ? 'Yes' : 'No'}\n<b>Username:</b> ${data.username || 'N/A'}\n<b>Password:</b> ${data.password || 'N/A'}`, { parse_mode: 'HTML' });
+}
+
+// /cancel
+async function cancelOp(bot, msg) {
+  bot.sendMessage(msg.chat.id, "🚫 Operation cancelled.");
+}
+
+module.exports = { createPanel, userInfo, cancelOp };
+
