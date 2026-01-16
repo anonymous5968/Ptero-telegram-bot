@@ -3,7 +3,7 @@ const axios = require('axios');
 
 // --- YOUR CREDENTIALS ---
 const CONSUMER_KEY = "OpklG6NcKn6ROXM0KJATPnFknMFhGHqAhuKVQ8GF5jaxMjhA";
-const CONSUMER_SECRET = "z13foYmQRTYiP7SmaOplG6vatTzDmqgRCF5xyuGn75PBAS7iyVbFJletWWcEhBo6";
+const CONSUMER_SECRET = "kpnNhreeE0sr3583Fp3DwiTAPGKx35ABAI3K8GNuLi7mepclAubvh3YTopAkaZb1";
 const PASSKEY = "Bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919";
 
 const SHORTCODE = "174379"; // Safaricom Test Paybill
