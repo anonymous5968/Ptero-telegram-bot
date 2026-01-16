@@ -2,7 +2,7 @@
 const axios = require('axios');
 
 // --- YOUR CREDENTIALS ---
-const CONSUMER_KEY = "VKTrra9Jx1c1rsNbyMZpJz04dxdz8dtheX6maGeokTvMMVBM";
+const CONSUMER_KEY = "OpklG6NcKn6ROXM0KJATPnFknMFhGHqAhuKVQ8GF5jaxMjhA";
 const CONSUMER_SECRET = "z13foYmQRTYiP7SmaOplG6vatTzDmqgRCF5xyuGn75PBAS7iyVbFJletWWcEhBo6";
 const PASSKEY = "Bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919";
 
